@@ -8,6 +8,7 @@ public class SystemTempScanner : IScanner
 {
     public string CategoryName => "系统临时文件";
     public string SourceApp => "系统";
+    public List<string>? TargetPaths { get; set; }
 
     public async Task<List<FileItem>> ScanAsync(IProgress<double>? progress, CancellationToken cancellationToken)
     {

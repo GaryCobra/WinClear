@@ -8,6 +8,7 @@ public class BrowserCacheScanner : IScanner
 {
     public string CategoryName => "浏览器缓存";
     public string SourceApp => "浏览器";
+    public List<string>? TargetPaths { get; set; }
 
     private static readonly (string Name, string Path)[] _browserPaths =
     {

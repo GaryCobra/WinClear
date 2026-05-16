@@ -9,13 +9,16 @@ public class DuplicateFileScanner : IScanner
 {
     public string CategoryName => "重复文件";
     public string SourceApp => "重复文件";
+    public List<string>? TargetPaths { get; set; }
 
     public async Task<List<FileItem>> ScanAsync(IProgress<double>? progress, CancellationToken cancellationToken)
     {
         var allFiles = new List<FileInfo>();
-        var drives = DriveInfo.GetDrives()
-            .Where(d => d.DriveType == DriveType.Fixed && d.IsReady)
-            .Select(d => d.RootDirectory.FullName);
+        var drives = TargetPaths?.Count > 0
+            ? TargetPaths
+            : DriveInfo.GetDrives()
+                .Where(d => d.DriveType == DriveType.Fixed && d.IsReady)
+                .Select(d => d.RootDirectory.FullName);
 
         foreach (var drive in drives)
         {

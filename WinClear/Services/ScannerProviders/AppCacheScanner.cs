@@ -8,6 +8,7 @@ public class AppCacheScanner : IScanner
 {
     public string CategoryName => "应用缓存";
     public string SourceApp => "应用";
+    public List<string>? TargetPaths { get; set; }
 
     private static readonly (string App, string Path)[] _appPaths =
     {

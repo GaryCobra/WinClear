@@ -6,6 +6,8 @@ namespace WinClear.Services;
 public class ScanEngine
 {
     private readonly List<IScanner> _scanners;
+    public ExclusionManager ExclusionManager { get; } = new();
+    public CleanupHistoryService CleanupHistory { get; } = new();
 
     public ScanEngine()
     {
@@ -17,27 +19,41 @@ public class ScanEngine
             new AppCacheScanner(),
             new LargeFileScanner(),
             new DuplicateFileScanner(),
+            new PrivacyTracesScanner(),
+            new SystemSlimScanner(),
         };
     }
 
     public UserDefinedScanner UserDefinedScanner { get; } = new();
 
-    public async Task<ScanResult> RunScanAsync(IProgress<double>? progress, CancellationToken cancellationToken)
+    public async Task<ScanResult> RunScanAsync(ScanTarget scanTarget, IProgress<double>? progress, CancellationToken cancellationToken)
     {
         var result = new ScanResult();
-        var allResults = new List<List<FileItem>>();
+        var activeScanners = _scanners
+            .Where(s => scanTarget.ScannerEnabled.GetValueOrDefault(s.CategoryName, true))
+            .ToList();
 
-        for (int i = 0; i < _scanners.Count; i++)
+        for (int i = 0; i < activeScanners.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var scanner = _scanners[i];
+            var scanner = activeScanners[i];
+
+            if (scanner is LargeFileScanner or DuplicateFileScanner)
+                scanner.TargetPaths = scanTarget.SelectedDrives;
+
+            scanner.TargetPaths ??= new List<string>();
+
             var items = await scanner.ScanAsync(
                 progress == null ? null : new Progress<double>(p =>
-                    progress.Report((i + p) / (_scanners.Count + (UserDefinedScanner.CustomPaths.Count > 0 ? 1 : 0)))),
+                    progress.Report((i + p) / (activeScanners.Count + (scanTarget.CustomPaths.Count > 0 ? 1 : 0)))),
                 cancellationToken);
 
-            if (items.Count > 0)
+            var filteredItems = items
+                .Where(f => !ExclusionManager.IsExcluded(f.FullPath))
+                .ToList();
+
+            if (filteredItems.Count > 0)
             {
                 var categoryNode = new FileItem
                 {
@@ -46,20 +62,22 @@ public class ScanEngine
                     IsSelected = true,
                     Category = scanner.CategoryName,
                     SourceApp = scanner.SourceApp,
-                    SizeBytes = items.Sum(f => f.SizeBytes),
+                    SizeBytes = filteredItems.Sum(f => f.SizeBytes),
                     SafetyTag = SafetyTag.Safe,
                 };
-                categoryNode.Children = new System.Collections.ObjectModel.ObservableCollection<FileItem>(items);
+                categoryNode.Children = new System.Collections.ObjectModel.ObservableCollection<FileItem>(filteredItems);
                 result.Categories.Add(categoryNode);
                 result.TotalSize += categoryNode.SizeBytes;
-                result.TotalFiles += items.Count;
+                result.TotalFiles += filteredItems.Count;
             }
         }
 
-        if (UserDefinedScanner.CustomPaths.Count > 0)
+        if (scanTarget.CustomPaths.Count > 0)
         {
+            UserDefinedScanner.CustomPaths = scanTarget.CustomPaths;
             var udItems = await UserDefinedScanner.ScanAsync(progress, cancellationToken);
-            if (udItems.Count > 0)
+            var filteredUd = udItems.Where(f => !ExclusionManager.IsExcluded(f.FullPath)).ToList();
+            if (filteredUd.Count > 0)
             {
                 var categoryNode = new FileItem
                 {
@@ -68,13 +86,13 @@ public class ScanEngine
                     IsSelected = true,
                     Category = UserDefinedScanner.CategoryName,
                     SourceApp = UserDefinedScanner.SourceApp,
-                    SizeBytes = udItems.Sum(f => f.SizeBytes),
+                    SizeBytes = filteredUd.Sum(f => f.SizeBytes),
                     SafetyTag = SafetyTag.Safe,
                 };
-                categoryNode.Children = new System.Collections.ObjectModel.ObservableCollection<FileItem>(udItems);
+                categoryNode.Children = new System.Collections.ObjectModel.ObservableCollection<FileItem>(filteredUd);
                 result.Categories.Add(categoryNode);
                 result.TotalSize += categoryNode.SizeBytes;
-                result.TotalFiles += udItems.Count;
+                result.TotalFiles += filteredUd.Count;
             }
         }
 

@@ -1,0 +1,63 @@
+<Window x:Class="WinClear.Views.ExclusionListWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:WinClear.ViewModels"
+        Title="排除列表（白名单）"
+        Width="500" Height="400"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="添加一个文件夹路径，扫描时将自动跳过该路径下的所有文件"
+                   TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+        <GroupBox Grid.Row="1" Header="已排除的路径" Margin="0,0,0,10">
+            <ListView ItemsSource="{Binding Entries}">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding Pattern}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Description}" Foreground="Gray" FontSize="11"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="移除"
+                                    Command="{Binding DataContext.RemoveEntryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel/>
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+            </ListView>
+        </GroupBox>
+
+        <GroupBox Grid.Row="2" Header="添加排除项">
+            <StackPanel>
+                <Grid Margin="5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" Text="{Binding NewPattern, UpdateSourceTrigger=PropertyChanged}"
+                             Margin="0,0,5,0"/>
+                </Grid>
+                <TextBox Text="{Binding NewDescription, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="5,5,5,0" ToolTip="备注说明（可选）"/>
+                <Button Content="添加排除项" Command="{Binding AddEntryCommand}" Margin="5,5"
+                        HorizontalAlignment="Right"/>
+            </StackPanel>
+        </GroupBox>
+    </Grid>
+</Window>

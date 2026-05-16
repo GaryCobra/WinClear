@@ -17,33 +17,45 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 工具栏 -->
+        <!-- 工具栏行1 -->
         <ToolBar Grid.Row="0">
+            <Button Command="{Binding QuickScanCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="⚡ "/>
+                    <TextBlock Text="快速扫描"/>
+                </StackPanel>
+            </Button>
             <Button Command="{Binding ScanCommand}">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="🔍 " />
-                    <TextBlock Text="扫描" />
+                    <TextBlock Text="🔍 "/>
+                    <TextBlock Text="扫描"/>
                 </StackPanel>
             </Button>
             <Separator/>
-            <Button Command="{Binding SelectAllCommand}">全选</Button>
-            <Button Command="{Binding DeselectAllCommand}">反选</Button>
+            <Button Command="{Binding OpenScanSettingsCommand}">📋 扫描设置</Button>
+            <Button Command="{Binding OpenExclusionListCommand}">🚫 排除列表</Button>
+        </ToolBar>
+        <!-- 工具栏行2 -->
+        <ToolBar Grid.Row="1">
+            <Button Command="{Binding SelectAllCommand}">☑ 全选</Button>
+            <Button Command="{Binding DeselectAllCommand}">☒ 反选</Button>
             <Separator/>
             <Button Command="{Binding DeleteSelectedCommand}">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="🗑️ " />
-                    <TextBlock Text="删除选中" />
+                    <TextBlock Text="🗑️ "/>
+                    <TextBlock Text="删除选中"/>
                 </StackPanel>
             </Button>
         </ToolBar>
 
         <!-- 主区域: 左侧分类树 + 右侧文件列表 -->
-        <Grid Grid.Row="1" Margin="5">
+        <Grid Grid.Row="2" Margin="5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="250"/>
                 <ColumnDefinition Width="*"/>
@@ -128,17 +140,18 @@
         </Grid>
 
         <!-- 进度条 -->
-        <ProgressBar Grid.Row="2" Height="4"
+        <ProgressBar Grid.Row="3" Height="4"
                      Value="{Binding ScanProgress}"
                      Visibility="{Binding IsScanning, Converter={StaticResource BoolToVisibilityConverter}}"
                      Margin="5,0"/>
 
         <!-- 状态栏 -->
-        <StatusBar Grid.Row="3">
+        <StatusBar Grid.Row="4">
             <StatusBar.ItemsPanel>
                 <ItemsPanelTemplate>
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
@@ -148,7 +161,10 @@
             <StatusBarItem>
                 <TextBlock Text="{Binding StatusText}"/>
             </StatusBarItem>
-            <StatusBarItem Grid.Column="1">
+            <StatusBarItem Grid.Column="1" HorizontalContentAlignment="Center">
+                <TextBlock Text="{Binding CleanupSummary}" Foreground="#1976D2" FontWeight="SemiBold"/>
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="2">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="🟢 " ToolTip="可安全删除"/>
                     <TextBlock Text="  🟡 " ToolTip="删除可能影响"/>

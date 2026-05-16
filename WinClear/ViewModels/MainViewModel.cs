@@ -10,10 +10,12 @@ namespace WinClear.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly ScanEngine _scanEngine;
+    private ScanTarget _currentScanTarget = ScanTarget.CreateDefault();
 
     public MainViewModel()
     {
         _scanEngine = new ScanEngine();
+        UpdateCleanupSummary();
     }
 
     [ObservableProperty]
@@ -27,6 +29,9 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private string _statusText = "就绪";
+
+    [ObservableProperty]
+    private string _cleanupSummary = string.Empty;
 
     [ObservableProperty]
     private bool _isScanning;
@@ -61,7 +66,7 @@ public partial class MainViewModel : ObservableObject
                 ScanProgress = p;
             });
 
-            var result = await _scanEngine.RunScanAsync(progress, CancellationToken.None);
+            var result = await _scanEngine.RunScanAsync(_currentScanTarget, progress, CancellationToken.None);
 
             Categories = result.Categories;
             TotalSize = result.TotalSize;
@@ -78,8 +83,34 @@ public partial class MainViewModel : ObservableObject
         {
             IsScanning = false;
             ScanCommand.NotifyCanExecuteChanged();
+            QuickScanCommand.NotifyCanExecuteChanged();
             DeleteSelectedCommand.NotifyCanExecuteChanged();
         }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanScan))]
+    private async Task QuickScanAsync()
+    {
+        _currentScanTarget = ScanTarget.CreateDefault();
+        await ScanAsync();
+    }
+
+    [RelayCommand]
+    private void OpenScanSettings()
+    {
+        var window = new Views.ScanSettingsWindow();
+        if (window.ShowDialog() == true && window.Result != null)
+        {
+            _currentScanTarget = window.Result;
+            ScanCommand.Execute(null);
+        }
+    }
+
+    [RelayCommand]
+    private void OpenExclusionList()
+    {
+        var window = new Views.ExclusionListWindow(_scanEngine.ExclusionManager);
+        window.ShowDialog();
     }
 
     private bool CanScan() => !IsScanning;
@@ -150,6 +181,10 @@ public partial class MainViewModel : ObservableObject
             System.Windows.MessageBoxButton.OK,
             failCount > 0 ? System.Windows.MessageBoxImage.Warning : System.Windows.MessageBoxImage.Information);
 
+        _scanEngine.CleanupHistory.Record(successCount, totalSize,
+            Categories.Select(c => c.Category).ToList());
+        UpdateCleanupSummary();
+
         StatusText = $"清理完成 - 成功 {successCount} 项，失败 {failCount} 项";
         UpdateSelectedStats();
     }
@@ -188,5 +223,13 @@ public partial class MainViewModel : ObservableObject
         SelectedCount = selected.Count;
         SelectedSize = selected.Sum(f => f.SizeBytes);
         DeleteSelectedCommand.NotifyCanExecuteChanged();
+    }
+
+    private void UpdateCleanupSummary()
+    {
+        var totalFreed = _scanEngine.CleanupHistory.TotalFreedBytes;
+        CleanupSummary = totalFreed > 0
+            ? $"累计清理: {Helpers.FileSizeFormatter.Format(totalFreed)}"
+            : string.Empty;
     }
 }

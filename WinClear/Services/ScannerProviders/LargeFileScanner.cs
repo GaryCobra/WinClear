@@ -10,13 +10,16 @@ public class LargeFileScanner : IScanner
     public string SourceApp => "大文件";
 
     public long MinSizeBytes { get; set; } = 100L * 1024 * 1024;
+    public List<string>? TargetPaths { get; set; }
 
     public async Task<List<FileItem>> ScanAsync(IProgress<double>? progress, CancellationToken cancellationToken)
     {
         var items = new List<FileItem>();
-        var drives = DriveInfo.GetDrives()
-            .Where(d => d.DriveType == DriveType.Fixed && d.IsReady)
-            .Select(d => d.RootDirectory.FullName);
+        var drives = TargetPaths?.Count > 0
+            ? TargetPaths
+            : DriveInfo.GetDrives()
+                .Where(d => d.DriveType == DriveType.Fixed && d.IsReady)
+                .Select(d => d.RootDirectory.FullName);
 
         foreach (var drive in drives)
         {

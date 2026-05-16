@@ -4,24 +4,34 @@ using WinClear.Services;
 
 namespace WinClear.ScannerProviders;
 
-public class WindowsUpdateScanner : IScanner
+public class SystemSlimScanner : IScanner
 {
-    public string CategoryName => "Windows 更新缓存";
-    public string SourceApp => "Windows 更新";
+    public string CategoryName => "系统瘦身";
+    public string SourceApp => "Windows";
     public List<string>? TargetPaths { get; set; }
 
     public async Task<List<FileItem>> ScanAsync(IProgress<double>? progress, CancellationToken cancellationToken)
     {
         var items = new List<FileItem>();
         var winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-        var paths = new[]
+        var targets = new List<(string DirPath, SafetyTag Tag)>
         {
-            Path.Combine(winDir, "SoftwareDistribution", "Download"),
+            (System.IO.Path.Combine(winDir, "Help"), SafetyTag.Warning),
+            (System.IO.Path.Combine(winDir, @"System32\oobe\info\backgrounds"), SafetyTag.Safe),
+            (System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Web", "Wallpaper"), SafetyTag.Warning),
         };
 
-        foreach (var dir in paths)
+        var oldWinDir = System.IO.Path.Combine(
+            System.IO.Path.GetPathRoot(Environment.GetFolderPath(Environment.SpecialFolder.System)) ?? "C:\\", "Windows.old");
+        if (Directory.Exists(oldWinDir))
+            targets.Add((oldWinDir, SafetyTag.Danger));
+
+        for (int i = 0; i < targets.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            progress?.Report((double)i / targets.Count);
+
+            var (dir, tag) = targets[i];
             if (!Directory.Exists(dir)) continue;
 
             try
@@ -39,7 +49,7 @@ public class WindowsUpdateScanner : IScanner
                             SizeBytes = info.Length,
                             Category = CategoryName,
                             SourceApp = SourceApp,
-                            SafetyTag = SafetyTag.Safe
+                            SafetyTag = tag
                         });
                     }
                     catch { }
@@ -47,7 +57,6 @@ public class WindowsUpdateScanner : IScanner
             }
             catch { }
         }
-
         return items;
     }
 }

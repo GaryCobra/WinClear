@@ -4,29 +4,39 @@ using WinClear.Services;
 
 namespace WinClear.ScannerProviders;
 
-public class WindowsUpdateScanner : IScanner
+public class PrivacyTracesScanner : IScanner
 {
-    public string CategoryName => "Windows 更新缓存";
-    public string SourceApp => "Windows 更新";
+    public string CategoryName => "隐私痕迹";
+    public string SourceApp => "系统";
     public List<string>? TargetPaths { get; set; }
+
+    private static readonly string[] _targetDirs =
+    {
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            @"Microsoft\Windows\Recent"),
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            @"Microsoft\Windows\Recent\AutomaticDestinations"),
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            @"Microsoft\Windows\Recent\CustomDestinations"),
+    };
 
     public async Task<List<FileItem>> ScanAsync(IProgress<double>? progress, CancellationToken cancellationToken)
     {
         var items = new List<FileItem>();
-        var winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-        var paths = new[]
-        {
-            Path.Combine(winDir, "SoftwareDistribution", "Download"),
-        };
-
-        foreach (var dir in paths)
+        for (int i = 0; i < _targetDirs.Length; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            progress?.Report((double)i / _targetDirs.Length);
+
+            var dir = _targetDirs[i];
             if (!Directory.Exists(dir)) continue;
 
             try
             {
-                var files = Directory.GetFiles(dir, "*", SearchOption.AllDirectories);
+                var files = Directory.GetFiles(dir, "*", SearchOption.TopDirectoryOnly);
                 foreach (var file in files)
                 {
                     try
@@ -47,7 +57,6 @@ public class WindowsUpdateScanner : IScanner
             }
             catch { }
         }
-
         return items;
     }
 }

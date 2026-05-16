@@ -8,6 +8,7 @@ public class UserDefinedScanner : IScanner
 {
     public string CategoryName => "自定义路径";
     public string SourceApp => "用户自定义";
+    public List<string>? TargetPaths { get; set; }
 
     public List<string> CustomPaths { get; set; } = new();
 
