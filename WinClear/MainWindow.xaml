@@ -1,0 +1,160 @@
+﻿<Window x:Class="WinClear.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:WinClear.ViewModels"
+        xmlns:conv="clr-namespace:WinClear.Converters"
+        Title="WinClear - 系统垃圾清理"
+        Width="900" Height="600"
+        MinWidth="700" MinHeight="450"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <conv:SafetyTagColorConverter x:Key="SafetyTagColorConverter"/>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <conv:FileSizeConverter x:Key="FileSizeConverter"/>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 工具栏 -->
+        <ToolBar Grid.Row="0">
+            <Button Command="{Binding ScanCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="🔍 " />
+                    <TextBlock Text="扫描" />
+                </StackPanel>
+            </Button>
+            <Separator/>
+            <Button Command="{Binding SelectAllCommand}">全选</Button>
+            <Button Command="{Binding DeselectAllCommand}">反选</Button>
+            <Separator/>
+            <Button Command="{Binding DeleteSelectedCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="🗑️ " />
+                    <TextBlock Text="删除选中" />
+                </StackPanel>
+            </Button>
+        </ToolBar>
+
+        <!-- 主区域: 左侧分类树 + 右侧文件列表 -->
+        <Grid Grid.Row="1" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左侧: 分类树 -->
+            <Border Grid.Column="0" BorderBrush="#E0E0E0" BorderThickness="1" Margin="0,0,5,0">
+                <TreeView ItemsSource="{Binding Categories}" SelectedItemChanged="TreeView_OnSelectedItemChanged">
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                                <TextBlock Text=" (" Margin="3,0,0,0"/>
+                                <TextBlock Text="{Binding SizeBytes, Converter={StaticResource FileSizeConverter}}"/>
+                                <TextBlock Text=")"/>
+                            </StackPanel>
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </Border>
+
+            <!-- 右侧: 文件列表 -->
+            <Border Grid.Column="1" BorderBrush="#E0E0E0" BorderThickness="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 文件列表头部 -->
+                    <Border Grid.Row="0" Background="#F5F5F5" Padding="5">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="1" FontWeight="SemiBold">文件名</TextBlock>
+                            <TextBlock Grid.Column="2" FontWeight="SemiBold" TextAlignment="Right">大小</TextBlock>
+                            <TextBlock Grid.Column="3" FontWeight="SemiBold" TextAlignment="Center">影响</TextBlock>
+                        </Grid>
+                    </Border>
+
+                    <!-- 文件列表项 -->
+                    <ListView Grid.Row="1" ItemsSource="{Binding CurrentFileItems}"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="30"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="60"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <CheckBox Grid.Column="0"
+                                              IsChecked="{Binding IsSelected}"
+                                              VerticalAlignment="Center"/>
+
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center"/>
+
+                                    <TextBlock Grid.Column="2"
+                                               Text="{Binding SizeBytes, Converter={StaticResource FileSizeConverter}}"
+                                               TextAlignment="Right"
+                                               VerticalAlignment="Center"/>
+
+                                    <Ellipse Grid.Column="3" Width="12" Height="12"
+                                             Fill="{Binding SafetyTag, Converter={StaticResource SafetyTagColorConverter}}"
+                                             Margin="0,0,0,0"
+                                             HorizontalAlignment="Center"
+                                             ToolTip="{Binding SafetyTag}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 进度条 -->
+        <ProgressBar Grid.Row="2" Height="4"
+                     Value="{Binding ScanProgress}"
+                     Visibility="{Binding IsScanning, Converter={StaticResource BoolToVisibilityConverter}}"
+                     Margin="5,0"/>
+
+        <!-- 状态栏 -->
+        <StatusBar Grid.Row="3">
+            <StatusBar.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                    </Grid>
+                </ItemsPanelTemplate>
+            </StatusBar.ItemsPanel>
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusText}"/>
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="1">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="🟢 " ToolTip="可安全删除"/>
+                    <TextBlock Text="  🟡 " ToolTip="删除可能影响"/>
+                    <TextBlock Text="  🔴 " ToolTip="谨慎操作"/>
+                </StackPanel>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>
